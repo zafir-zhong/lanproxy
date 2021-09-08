@@ -1,0 +1,56 @@
+
+# lanproxy
+基于lan-proxy开源代理工具，改造让其首先读取lanproxy.home，然后才读取user.home  
+已调试完成，打包后运行Dockerfile第一行，然后运行proxy.yml即可
+打包成容器的逻辑为：拷贝server中的内容，放到指定目录，设置正确的权限
+k8s部署逻辑为：通过挂载本地目录覆盖config内容，并通过节点上的proxydata标签选择有数据的节点（你也可以通过其他方式进行数据挂载）
+端口对外暴露方式为：把不同端口映射到节点端口上，由于我推荐使用ssl，所以我只暴露了ssl对应的端口。
+而公网实际端口也是通过映射方式暴露的，所以管理端填的虽然是80，但是实际对外的端口不是。
+进行验证的限制是为了更安全
+
+# 部署步骤
+## 服务端
+
+- 直接部署
+
+```shell script
+mvn clean package
+cd distribution/proxy-server-0.1/bin
+bash  startup.sh
+```
+
+说明：
+1. 服务端配置文件位于``distribution/proxy-server-0.1/conf``
+2. 请检查服务端配置与客户端一致，例如设置为开启ssl，则需要连接服务端的ssl端口
+
+
+
+- 打包成镜像
+```shell script
+mvn clean package
+cd distribution
+docker build -t tool/lan-proxy:1.0.00-release .
+```
+
+说明：
+1. 服务端配置文件位于``distribution/proxy-server-0.1/conf``
+2. 请检查服务端配置与客户端一致，例如设置为开启ssl，则需要连接服务端的ssl端口
+3. 建议正确修改配置后再运行镜像构建命令
+4. 请注意宿主机端口与容器端口的区别，确认端口配置正确
+
+
+- k8s部署
+```shell script
+# 请注意，容器化部署需要修改对外暴露的端口，例如我把4993映射成30993，所以实际连接的是30993
+bash build.sh
+```
+
+说明：
+1. 请核对``distribution``目录下的yml文件，在``proxy-base.yml``中需要挂载主机目录
+2. 请核对端口设置，在k8s是进行了端口映射的，所以访问宿主机端口有所区别：例如4993映射成了30993；80映射成30008；8090映射成30809
+3. 服务端配置文件位于``distribution/proxy-server-0.1/conf``，在生成``configmap``或挂载前请进行核对
+4. 请检查服务端配置与客户端一致，例如设置为开启ssl，则需要连接服务端的ssl端口
+5. 若不打算用filebeat整理日志，只需根据注释修改``distribution/buildServer.sh``
+
+
+

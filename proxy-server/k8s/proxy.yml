@@ -1,0 +1,159 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxy
+  namespace: tool
+  labels:
+    app: proxy
+spec:
+  type: NodePort
+  sessionAffinity: ClientIP
+  ports:
+    - name: proxy-admin
+      port: 8090
+      targetPort: 8090
+      nodePort: 30809
+    - name: proxy-service
+      port: 4993
+      targetPort: 4993
+      nodePort: 30993
+    - name: proxy-out
+      port: 80
+      targetPort: 80
+      nodePort: 30008
+  selector:
+    project: ms
+    app: proxy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy
+  namespace: tool
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      project: ms
+      app: proxy
+  template:
+    metadata:
+      labels:
+        project: ms
+        app: proxy
+    spec:
+      affinity:        # 配置节点亲和
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: proxydata
+                    operator: In
+                    values:
+                      - "true"
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 10 #当删除Pod时，等待时间
+      containers:
+        - name: proxy
+          image: tool/lan-proxy:1.0.00-release
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: APP_NAME
+              value: proxy
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: client-data  #必须有名称
+              mountPath: /app/data/ #机子内目录
+            - name: configs
+              mountPath: /app/conf/
+            # 挂载一个空目录用于共享
+            - name: logs
+              # 容器内目录地址
+              mountPath: /app/logs
+          resources:
+            limits:
+              cpu: 1
+              memory: 1024Mi
+          readinessProbe:              #就绪探针
+            tcpSocket:
+              port: 8090
+            initialDelaySeconds: 20    #延迟加载时间
+            periodSeconds: 5           #重试时间间隔
+            timeoutSeconds: 10         #超时时间设置
+            failureThreshold: 5        #探测失败的重试次数
+          livenessProbe:               #存活探针
+            tcpSocket:
+              port: 8090
+            initialDelaySeconds: 60    #延迟加载时间
+            periodSeconds: 5           #重试时间间隔
+            timeoutSeconds: 5          #超时时间设置
+            failureThreshold: 3        #探测失败的重试次数
+        - name: filebeat
+          # 边车有版本要求，所以不加到这里来
+          #          lifecycle:
+          #            type: Sidecar
+          image: elastic/filebeat:7.9.3
+          imagePullPolicy: IfNotPresent
+          args:
+            - -environment
+            - container
+            - -c
+            - /app/config/filebeat.yml
+          volumeMounts:
+            # 独立的配置文件，这个配置文件通过kubectl create configmap --from-file=path
+            # kubectl create -n tool configmap swagger2word-filebeat-config --from-file=`pwd`
+            # kubectl delete -n tool configmap swagger2word-filebeat-config
+            - name: configs
+              # 机子内目录
+              mountPath: /app/config
+            - name: logs
+              #机子内目录
+              mountPath: /app/logs
+          resources:
+            limits:
+              memory: 200Mi
+          readinessProbe:
+            #使用命令检查
+            exec:
+              #指令，通过获取是否有锁来判断是否成功
+              command:
+                #指令
+                - cat
+                - /usr/share/filebeat/data/filebeat.lock
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            exec:
+              command:
+                - cat
+                - /usr/share/filebeat/data/filebeat.lock
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: client-data #挂载本机文件
+          hostPath:
+            path: /usr/local/lan-proxy/data      #宿主机挂载点
+        - name: configs
+          configMap:
+            # 把configMap挂载成机子内的文件，这个配置文件通过kubectl create configmap --from-file=path
+            # kubectl create -n tool configmap lan-proxy-config --from-file=`pwd`
+            # kubectl delete -n tool configmap lan-proxy-config
+            name: lan-proxy-config
+            items:
+              - key: config.properties
+                path: config.properties
+              - key: test.jks
+                path: test.jks
+              - key: log4j.properties
+                path: log4j.properties
+              - key: filebeat.yml
+                path: filebeat.yml
+        - name: logs
+          emptyDir: {}

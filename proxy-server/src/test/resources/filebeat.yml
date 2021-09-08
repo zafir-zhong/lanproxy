@@ -1,0 +1,28 @@
+filebeat.registry.flush: 5s
+filebeat.shutdown_timeout: 5s
+filebeat.inputs:
+  - type: log
+    processors:
+      - add_fields:
+          fields:
+            log_type: frame_log
+            service: lanporxy
+    enabled: true
+    paths:
+      - /app/logs/*.log
+    multiline.pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{3}'
+    multiline.negate: true
+    multiline.match: after
+# 一般的输出到es
+#output.elasticsearch:
+#  hosts: ["127.0.0.1:9200"]
+#  username: "elastic"
+#  password: "eeexxxsss"
+#  pipelines:
+#    - pipeline: "%{[fields.log_type]}"
+#      mappings:
+#        frame_log: "frame_log_test"
+# 测试用的输出到文件
+output.file:
+  path: "/tmp/filebeat"
+  filename: filebeat
