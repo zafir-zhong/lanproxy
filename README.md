@@ -23,7 +23,7 @@ bash  startup.sh
 1. 服务端配置文件位于``distribution/proxy-server-0.1/conf``
 2. 请检查服务端配置与客户端一致，例如设置为开启ssl，则需要连接服务端的ssl端口
 
-
+---
 
 - 打包成镜像
 ```shell script
@@ -38,6 +38,7 @@ docker build -t tool/lan-proxy:1.0.00-release .
 3. 建议正确修改配置后再运行镜像构建命令
 4. 请注意宿主机端口与容器端口的区别，确认端口配置正确
 
+---
 
 - k8s部署
 ```shell script
