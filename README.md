@@ -1,9 +1,9 @@
 
 # lanproxy
-基于lan-proxy开源代理工具，改造让其首先读取lanproxy.home，然后才读取user.home  
-已调试完成，打包后运行Dockerfile第一行，然后运行proxy.yml即可
+基于lan-proxy开源代理工具，改造让其首先读取``lanproxy.home``，然后才读取``user.home  ``
+已调试完成，打包后运行``Dockerfile``第一行，然后运行``proxy.yml``即可
 打包成容器的逻辑为：拷贝server中的内容，放到指定目录，设置正确的权限
-k8s部署逻辑为：通过挂载本地目录覆盖config内容，并通过节点上的proxydata标签选择有数据的节点（你也可以通过其他方式进行数据挂载）
+k8s部署逻辑为：通过挂载本地目录覆盖``config``内容，并通过节点上的``proxydata``标签选择有数据的节点（你也可以通过其他方式进行数据挂载）
 端口对外暴露方式为：把不同端口映射到节点端口上，由于我推荐使用ssl，所以我只暴露了ssl对应的端口。
 而公网实际端口也是通过映射方式暴露的，所以管理端填的虽然是80，但是实际对外的端口不是。
 进行验证的限制是为了更安全
@@ -15,7 +15,7 @@ tips:
 - 为了服务安全，建议限制端口范围，规范管理
 
 ## 改动项：
-- 代码：不只是读``user.home``，会更优先地读取``lanproxy.home``作为工作目录（[代码地址](https://github.com/zafir-zhong/lanproxy/proxy-server/src/main/java/org/fengfei/lanproxy/server/config/ProxyConfig.java)）
+- 代码：不只是读``user.home``，会更优先地读取``lanproxy.home``作为工作目录（[代码地址](https://github.com/zafir-zhong/lanproxy/blob/master/proxy-server/src/main/java/org/fengfei/lanproxy/server/config/ProxyConfig.java)）
 - 优化：加入了docker和k8s对应的模板，[模板地址](https://github.com/zafir-zhong/public/tree/master/tool/lanproxy/proxy-server/k8s)
 
 # 部署步骤
