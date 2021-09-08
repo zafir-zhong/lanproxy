@@ -8,6 +8,16 @@ k8s部署逻辑为：通过挂载本地目录覆盖config内容，并通过节�
 而公网实际端口也是通过映射方式暴露的，所以管理端填的虽然是80，但是实际对外的端口不是。
 进行验证的限制是为了更安全
 
+## 说明
+tips: 
+- 任何过公网的东西建议使用https增加信息安全性
+- 内网穿透建议自己使用，不建议公用   
+- 为了服务安全，建议限制端口范围，规范管理
+
+## 改动项：
+- 代码：不只是读``user.home``，会更优先地读取``lanproxy.home``作为工作目录（[代码地址](https://github.com/zafir-zhong/public/blob/master/tool/lanproxy/proxy-server/src/main/java/org/fengfei/lanproxy/server/config/ProxyConfig.java)）
+- 优化：加入了docker和k8s对应的模板，[模板地址](https://github.com/zafir-zhong/public/tree/master/tool/lanproxy/proxy-server/k8s)
+
 # 部署步骤
 ## 服务端
 
