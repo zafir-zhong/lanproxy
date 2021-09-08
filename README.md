@@ -15,7 +15,7 @@ tips:
 - 为了服务安全，建议限制端口范围，规范管理
 
 ## 改动项：
-- 代码：不只是读``user.home``，会更优先地读取``lanproxy.home``作为工作目录（[代码地址](https://github.com/zafir-zhong/public/blob/master/tool/lanproxy/proxy-server/src/main/java/org/fengfei/lanproxy/server/config/ProxyConfig.java)）
+- 代码：不只是读``user.home``，会更优先地读取``lanproxy.home``作为工作目录（[代码地址](https://github.com/zafir-zhong/lanproxy/proxy-server/src/main/java/org/fengfei/lanproxy/server/config/ProxyConfig.java)）
 - 优化：加入了docker和k8s对应的模板，[模板地址](https://github.com/zafir-zhong/public/tree/master/tool/lanproxy/proxy-server/k8s)
 
 # 部署步骤
