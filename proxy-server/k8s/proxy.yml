@@ -55,7 +55,7 @@ spec:
       terminationGracePeriodSeconds: 10 #当删除Pod时，等待时间
       containers:
         - name: proxy
-          image: tool/lan-proxy:1.0.00-release
+          image: tool/lan-proxy:1.0.01-release
           imagePullPolicy: IfNotPresent
           env:
             - name: APP_NAME

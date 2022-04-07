@@ -1,4 +1,4 @@
-# docker build -t tool/lan-proxy:1.0.00-release .
+# docker build -t tool/lan-proxy:1.0.01-release .
 
 FROM openjdk:8-jdk-alpine
 
