@@ -64,7 +64,6 @@ public class RouteConfig {
                     for (String cookie : cookies) {
                         String[] cookieArr = cookie.split("=");
                         if (AUTH_COOKIE_KEY.equals(cookieArr[0].trim())) {
-                            // TODO 用户检查改为redis
                             if (cookieArr.length == 2 && checkToken(cookieArr[1])) {
                                 authenticated = true;
                                 token.set(cookieArr[1]);
@@ -155,7 +154,6 @@ public class RouteConfig {
 
                 if (checkUser(username, password)) {
                     String token = UUID.randomUUID().toString().replace("-", "");
-                    // TODO token应该缓存起来
                     setToken(token, MysqlUtils.getUserByName(username));
                     return ResponseInfo.build(token);
                 }

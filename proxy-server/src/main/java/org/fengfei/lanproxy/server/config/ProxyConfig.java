@@ -18,6 +18,7 @@ import org.fengfei.lanproxy.common.Config;
 import org.fengfei.lanproxy.common.JsonUtil;
 import org.fengfei.lanproxy.server.entity.Client;
 import org.fengfei.lanproxy.server.entity.ClientProxyMapping;
+import org.fengfei.lanproxy.server.utils.RedisUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +91,7 @@ public class ProxyConfig implements Serializable {
     private volatile Map<Integer, String> inetPortLanInfoMapping = new HashMap<Integer, String>();
 
     /** 配置变化监听器 */
-    private List<ConfigChangedListener> configChangedListeners = new ArrayList<ConfigChangedListener>();
+    private static List<ConfigChangedListener> configChangedListeners = new ArrayList<ConfigChangedListener>();
 
     private ProxyConfig() {
 
@@ -123,7 +124,7 @@ public class ProxyConfig implements Serializable {
                 "config init serverBind {}, serverPort {}, configServerBind {}, configServerPort {}, configAdminUsername {}, configAdminPassword {}",
                 serverBind, serverPort, configServerBind, configServerPort, configAdminUsername, configAdminPassword);
 
-        update(null);
+        update();
     }
 
     public Integer getServerPort() {
@@ -197,80 +198,19 @@ public class ProxyConfig implements Serializable {
     /**
      * 解析配置文件
      */
-    public void update(String proxyMappingConfigJson) {
-        // TODO 这里改成放在数据库里面
-        File file = new File(CONFIG_FILE);
-        try {
-            if (proxyMappingConfigJson == null && file.exists()) {
-                InputStream in = new FileInputStream(file);
-                byte[] buf = new byte[1024];
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                int readIndex;
-                while ((readIndex = in.read(buf)) != -1) {
-                    out.write(buf, 0, readIndex);
-                }
-
-                in.close();
-                proxyMappingConfigJson = new String(out.toByteArray(), Charset.forName("UTF-8"));
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        List<Client> clients = JsonUtil.json2object(proxyMappingConfigJson, new TypeToken<List<Client>>() {
-        });
-        if (clients == null) {
-            clients = new ArrayList<Client>();
-        }
-
-        Map<String, List<Integer>> clientInetPortMapping = new HashMap<String, List<Integer>>();
-        Map<Integer, String> inetPortLanInfoMapping = new HashMap<Integer, String>();
-
-        // 构造端口映射关系
-        for (Client client : clients) {
-            String clientKey = client.getClientKey();
-            if (clientInetPortMapping.containsKey(clientKey)) {
-                throw new IllegalArgumentException("密钥同时作为客户端标识，不能重复： " + clientKey);
-            }
-            List<ClientProxyMapping> mappings = client.getProxyMappings();
-            List<Integer> ports = new ArrayList<Integer>();
-            clientInetPortMapping.put(clientKey, ports);
-            for (ClientProxyMapping mapping : mappings) {
-                Integer port = mapping.getInetPort();
-                ports.add(port);
-                if (inetPortLanInfoMapping.containsKey(port)) {
-                    throw new IllegalArgumentException("一个公网端口只能映射一个后端信息，不能重复: " + port);
-                }
-
-                inetPortLanInfoMapping.put(port, mapping.getLan());
-            }
-        }
-
-        // 替换之前的配置关系
-        this.clientInetPortMapping = clientInetPortMapping;
-        this.inetPortLanInfoMapping = inetPortLanInfoMapping;
-        this.clients = clients;
-
-        if (proxyMappingConfigJson != null) {
-            try {
-                FileOutputStream out = new FileOutputStream(file);
-                out.write(proxyMappingConfigJson.getBytes(Charset.forName("UTF-8")));
-                out.flush();
-                out.close();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
+    public void update() {
         // TODO 加一个redis订阅机制来修改这个端口改动
-        notifyconfigChangedListeners();
+        notifyconfigChangedListeners(true);
     }
 
     /**
      * 配置更新通知
      */
-    private void notifyconfigChangedListeners() {
-        List<ConfigChangedListener> changedListeners = new ArrayList<ConfigChangedListener>(configChangedListeners);
-        for (ConfigChangedListener changedListener : changedListeners) {
+    public static void notifyconfigChangedListeners(boolean send2Redis) {
+        if(send2Redis) {
+            RedisUtils.publish("test");
+        }
+        for (ConfigChangedListener changedListener : configChangedListeners) {
             changedListener.onChanged();
         }
     }
@@ -280,7 +220,7 @@ public class ProxyConfig implements Serializable {
      *
      * @param configChangedListener
      */
-    public void addConfigChangedListener(ConfigChangedListener configChangedListener) {
+    public static void addConfigChangedListener(ConfigChangedListener configChangedListener) {
         configChangedListeners.add(configChangedListener);
     }
 

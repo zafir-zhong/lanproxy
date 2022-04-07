@@ -69,8 +69,8 @@ public class RedisUtils {
                             new JedisPubSub() {
                                 @Override
                                 public void onMessage(String channel, String message) {
-                                    super.onMessage(channel, message);
                                     // TODO 触发改动相关操作
+                                    ProxyConfig.notifyconfigChangedListeners(false);
                                 }
                             },
                             CHANNEL);
@@ -83,8 +83,7 @@ public class RedisUtils {
                     jedisCluster.subscribe(new JedisPubSub() {
                         @Override
                         public void onMessage(String channel, String message) {
-                            super.onMessage(channel, message);
-                            // TODO 触发改动相关操作
+                            ProxyConfig.notifyconfigChangedListeners(false);
                         }
                     }, CHANNEL);
                 }
