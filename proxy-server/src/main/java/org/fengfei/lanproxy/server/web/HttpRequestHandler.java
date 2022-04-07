@@ -1,4 +1,4 @@
-package org.fengfei.lanproxy.server.config.web;
+package org.fengfei.lanproxy.server.web;
 
 import java.io.File;
 import java.io.RandomAccessFile;

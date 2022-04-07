@@ -1,4 +1,4 @@
-package org.fengfei.lanproxy.server.config.web.exception;
+package org.fengfei.lanproxy.server.web.exception;
 
 public class ContextException extends RuntimeException {
 

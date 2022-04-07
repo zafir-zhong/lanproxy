@@ -1,20 +1,28 @@
-package org.fengfei.lanproxy.server.config.web.routes;
+package org.fengfei.lanproxy.server.web.routes;
 
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.crypto.SecureUtil;
+import com.alibaba.fastjson.JSONObject;
+import io.netty.util.internal.StringUtil;
 import org.fengfei.lanproxy.common.JsonUtil;
 import org.fengfei.lanproxy.server.ProxyChannelManager;
+import org.fengfei.lanproxy.server.constant.Constants;
 import org.fengfei.lanproxy.server.config.ProxyConfig;
-import org.fengfei.lanproxy.server.config.ProxyConfig.Client;
-import org.fengfei.lanproxy.server.config.web.ApiRoute;
-import org.fengfei.lanproxy.server.config.web.RequestHandler;
-import org.fengfei.lanproxy.server.config.web.RequestMiddleware;
-import org.fengfei.lanproxy.server.config.web.ResponseInfo;
-import org.fengfei.lanproxy.server.config.web.exception.ContextException;
+import org.fengfei.lanproxy.server.entity.Client;
+import org.fengfei.lanproxy.server.entity.UserInfo;
+import org.fengfei.lanproxy.server.web.ApiRoute;
+import org.fengfei.lanproxy.server.web.RequestHandler;
+import org.fengfei.lanproxy.server.web.RequestMiddleware;
+import org.fengfei.lanproxy.server.web.ResponseInfo;
+import org.fengfei.lanproxy.server.web.exception.ContextException;
 import org.fengfei.lanproxy.server.metrics.MetricsCollector;
+import org.fengfei.lanproxy.server.utils.MysqlUtils;
+import org.fengfei.lanproxy.server.utils.RedisUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +36,6 @@ import io.netty.handler.codec.http.HttpHeaders;
  * 接口实现
  *
  * @author fengfei
- *
  */
 public class RouteConfig {
 
@@ -36,8 +43,13 @@ public class RouteConfig {
 
     private static Logger logger = LoggerFactory.getLogger(RouteConfig.class);
 
-    /** 管理员不能同时在多个地方登录 */
-    private static String token;
+    private static ThreadLocal<String> token = new ThreadLocal<>();
+
+    /**
+     * 管理员不能同时在多个地方登录
+     */
+    @Deprecated
+//    private static String token;
 
     public static void init() {
 
@@ -52,8 +64,10 @@ public class RouteConfig {
                     for (String cookie : cookies) {
                         String[] cookieArr = cookie.split("=");
                         if (AUTH_COOKIE_KEY.equals(cookieArr[0].trim())) {
-                            if (cookieArr.length == 2 && cookieArr[1].equals(token)) {
+                            // TODO 用户检查改为redis
+                            if (cookieArr.length == 2 && checkToken(cookieArr[1])) {
                                 authenticated = true;
+                                token.set(cookieArr[1]);
                             }
                         }
                     }
@@ -62,7 +76,7 @@ public class RouteConfig {
                 String auth = request.headers().get(HttpHeaders.Names.AUTHORIZATION);
                 if (!authenticated && auth != null) {
                     String[] authArr = auth.split(" ");
-                    if (authArr.length == 2 && authArr[0].equals(ProxyConfig.getInstance().getConfigAdminUsername()) && authArr[1].equals(ProxyConfig.getInstance().getConfigAdminPassword())) {
+                    if (authArr.length == 2 && checkUser(authArr[0], authArr[1])) {
                         authenticated = true;
                     }
                 }
@@ -80,7 +94,7 @@ public class RouteConfig {
 
             @Override
             public ResponseInfo request(FullHttpRequest request) {
-                List<Client> clients = ProxyConfig.getInstance().getClients();
+                List<Client> clients = MysqlUtils.getClients();
                 for (Client client : clients) {
                     Channel channel = ProxyChannelManager.getCmdChannel(client.getClientKey());
                     if (channel != null) {
@@ -89,7 +103,7 @@ public class RouteConfig {
                         client.setStatus(0);// offline
                     }
                 }
-                return ResponseInfo.build(ProxyConfig.getInstance().getClients());
+                return ResponseInfo.build(clients);
             }
         });
 
@@ -106,9 +120,11 @@ public class RouteConfig {
                 if (clients == null) {
                     return ResponseInfo.build(ResponseInfo.CODE_INVILID_PARAMS, "Error json config");
                 }
-
+                final List<Client> clientsInRunnable = clients;
                 try {
-                    ProxyConfig.getInstance().update(config);
+
+                    MysqlUtils.updateClients(clientsInRunnable);
+
                 } catch (Exception ex) {
                     logger.error("config update error", ex);
                     return ResponseInfo.build(ResponseInfo.CODE_INVILID_PARAMS, ex.getMessage());
@@ -137,8 +153,10 @@ public class RouteConfig {
                     return ResponseInfo.build(ResponseInfo.CODE_INVILID_PARAMS, "Error username or password");
                 }
 
-                if (username.equals(ProxyConfig.getInstance().getConfigAdminUsername()) && password.equals(ProxyConfig.getInstance().getConfigAdminPassword())) {
-                    token = UUID.randomUUID().toString().replace("-", "");
+                if (checkUser(username, password)) {
+                    String token = UUID.randomUUID().toString().replace("-", "");
+                    // TODO token应该缓存起来
+                    setToken(token, MysqlUtils.getUserByName(username));
                     return ResponseInfo.build(token);
                 }
 
@@ -150,7 +168,10 @@ public class RouteConfig {
 
             @Override
             public ResponseInfo request(FullHttpRequest request) {
-                token = null;
+                final String key = token.get();
+                if (StrUtil.isNotBlank(key)) {
+                    RedisUtils.deleteKey(key);
+                }
                 return ResponseInfo.build(ResponseInfo.CODE_OK, "success");
             }
         });
@@ -172,4 +193,35 @@ public class RouteConfig {
         });
     }
 
+
+    public static boolean checkToken(String token) {
+        final String key = RedisUtils.getKey(Constants.TOKEN + token);
+        if (StringUtil.isNullOrEmpty(key)) {
+            return false;
+        }
+        final UserInfo userInfo = JSONObject.parseObject(key, UserInfo.class);
+        if (StringUtil.isNullOrEmpty(userInfo.getPermission())) {
+            return false;
+        }
+        return userInfo.getPermission().contains(Constants.SERVICE);
+    }
+
+    public static void setToken(String token, UserInfo userInfo) {
+        RedisUtils.setKey(Constants.TOKEN + token, JSONObject.toJSONString(userInfo), Constants.DEFAULT_TIME);
+    }
+
+    public static boolean checkUser(String username, String password) {
+        if (StringUtil.isNullOrEmpty(password)) {
+            return false;
+        }
+        final UserInfo userByName = MysqlUtils.getUserByName(username);
+        if (userByName == null) {
+            return false;
+        }
+        return SecureUtil.md5(password).equals(userByName.getPassword());
+    }
+
+    public static void main(String[] args) {
+        System.out.println(SecureUtil.md5("Xuan1210"));
+    }
 }

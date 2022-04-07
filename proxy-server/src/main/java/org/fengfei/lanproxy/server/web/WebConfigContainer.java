@@ -1,8 +1,8 @@
-package org.fengfei.lanproxy.server.config.web;
+package org.fengfei.lanproxy.server.web;
 
 import org.fengfei.lanproxy.common.container.Container;
 import org.fengfei.lanproxy.server.config.ProxyConfig;
-import org.fengfei.lanproxy.server.config.web.routes.RouteConfig;
+import org.fengfei.lanproxy.server.web.routes.RouteConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

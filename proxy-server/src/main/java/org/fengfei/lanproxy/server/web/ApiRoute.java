@@ -1,4 +1,4 @@
-package org.fengfei.lanproxy.server.config.web;
+package org.fengfei.lanproxy.server.web;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.fengfei.lanproxy.server.config.web.exception.ContextException;
+import org.fengfei.lanproxy.server.web.exception.ContextException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

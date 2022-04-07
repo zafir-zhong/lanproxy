@@ -16,6 +16,8 @@ import java.util.Set;
 
 import org.fengfei.lanproxy.common.Config;
 import org.fengfei.lanproxy.common.JsonUtil;
+import org.fengfei.lanproxy.server.entity.Client;
+import org.fengfei.lanproxy.server.entity.ClientProxyMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,10 +66,16 @@ public class ProxyConfig implements Serializable {
     private Integer configServerPort;
 
     /** 配置服务管理员用户名 */
+    @Deprecated
     private String configAdminUsername;
 
     /** 配置服务管理员密码 */
+    @Deprecated
     private String configAdminPassword;
+
+    private RedisConfig redisConfig;
+
+    private MysqlConfig mysqlConfig;
 
     /** 代理客户端，支持多个客户端 */
     private List<Client> clients;
@@ -98,6 +106,19 @@ public class ProxyConfig implements Serializable {
         this.configAdminUsername = Config.getInstance().getStringValue("config.admin.username");
         this.configAdminPassword = Config.getInstance().getStringValue("config.admin.password");
 
+        this.mysqlConfig = new MysqlConfig(
+                Config.getInstance().getStringValue("config.mysql.url"),
+                Config.getInstance().getStringValue("config.mysql.username"),
+                Config.getInstance().getStringValue("config.mysql.password")
+        );
+        this.redisConfig = new RedisConfig(
+                Config.getInstance().getStringValue("config.redis.type"),
+                Config.getInstance().getStringValue("config.redis.servers"),
+                Config.getInstance().getStringValue("config.redis.master"),
+                Config.getInstance().getStringValue("config.redis.username"),
+                Config.getInstance().getStringValue("config.redis.password"),
+                Config.getInstance().getIntValue("config.redis.database")
+                );
         logger.info(
                 "config init serverBind {}, serverPort {}, configServerBind {}, configServerPort {}, configAdminUsername {}, configAdminPassword {}",
                 serverBind, serverPort, configServerBind, configServerPort, configAdminUsername, configAdminPassword);
@@ -157,11 +178,27 @@ public class ProxyConfig implements Serializable {
         return clients;
     }
 
+    public RedisConfig getRedisConfig() {
+        return redisConfig;
+    }
+
+    public void setRedisConfig(RedisConfig redisConfig) {
+        this.redisConfig = redisConfig;
+    }
+
+    public MysqlConfig getMysqlConfig() {
+        return mysqlConfig;
+    }
+
+    public void setMysqlConfig(MysqlConfig mysqlConfig) {
+        this.mysqlConfig = mysqlConfig;
+    }
+
     /**
      * 解析配置文件
      */
     public void update(String proxyMappingConfigJson) {
-
+        // TODO 这里改成放在数据库里面
         File file = new File(CONFIG_FILE);
         try {
             if (proxyMappingConfigJson == null && file.exists()) {
@@ -224,7 +261,7 @@ public class ProxyConfig implements Serializable {
                 throw new RuntimeException(e);
             }
         }
-
+        // TODO 加一个redis订阅机制来修改这个端口改动
         notifyconfigChangedListeners();
     }
 
@@ -304,103 +341,7 @@ public class ProxyConfig implements Serializable {
         return instance;
     }
 
-    /**
-     * 代理客户端
-     *
-     * @author fengfei
-     *
-     */
-    public static class Client implements Serializable {
 
-        private static final long serialVersionUID = 1L;
-
-        /** 客户端备注名称 */
-        private String name;
-
-        /** 代理客户端唯一标识key */
-        private String clientKey;
-
-        /** 代理客户端与其后面的真实服务器映射关系 */
-        private List<ClientProxyMapping> proxyMappings;
-
-        private int status;
-
-        public String getClientKey() {
-            return clientKey;
-        }
-
-        public void setClientKey(String clientKey) {
-            this.clientKey = clientKey;
-        }
-
-        public List<ClientProxyMapping> getProxyMappings() {
-            return proxyMappings;
-        }
-
-        public void setProxyMappings(List<ClientProxyMapping> proxyMappings) {
-            this.proxyMappings = proxyMappings;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public int getStatus() {
-            return status;
-        }
-
-        public void setStatus(int status) {
-            this.status = status;
-        }
-
-    }
-
-    /**
-     * 代理客户端与其后面真实服务器映射关系
-     *
-     * @author fengfei
-     *
-     */
-    public static class ClientProxyMapping {
-
-        /** 代理服务器端口 */
-        private Integer inetPort;
-
-        /** 需要代理的网络信息（代理客户端能够访问），格式 192.168.1.99:80 (必须带端口) */
-        private String lan;
-
-        /** 备注名称 */
-        private String name;
-
-        public Integer getInetPort() {
-            return inetPort;
-        }
-
-        public void setInetPort(Integer inetPort) {
-            this.inetPort = inetPort;
-        }
-
-        public String getLan() {
-            return lan;
-        }
-
-        public void setLan(String lan) {
-            this.lan = lan;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-    }
 
     /**
      * 配置更新回调

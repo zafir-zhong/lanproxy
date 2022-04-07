@@ -15,7 +15,7 @@ import org.fengfei.lanproxy.protocol.ProxyMessageDecoder;
 import org.fengfei.lanproxy.protocol.ProxyMessageEncoder;
 import org.fengfei.lanproxy.server.config.ProxyConfig;
 import org.fengfei.lanproxy.server.config.ProxyConfig.ConfigChangedListener;
-import org.fengfei.lanproxy.server.config.web.WebConfigContainer;
+import org.fengfei.lanproxy.server.web.WebConfigContainer;
 import org.fengfei.lanproxy.server.handlers.ServerChannelHandler;
 import org.fengfei.lanproxy.server.handlers.UserChannelHandler;
 import org.fengfei.lanproxy.server.metrics.handler.BytesMetricsHandler;
@@ -74,7 +74,6 @@ public class ProxyServerContainer implements Container, ConfigChangedListener {
                 ch.pipeline().addLast(new ServerChannelHandler());
             }
         });
-
         try {
             bootstrap.bind(ProxyConfig.getInstance().getServerBind(), ProxyConfig.getInstance().getServerPort()).get();
             logger.info("proxy server start on port " + ProxyConfig.getInstance().getServerPort());
