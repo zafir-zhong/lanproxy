@@ -8,6 +8,7 @@ import redis.clients.jedis.util.Pool;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static org.fengfei.lanproxy.server.constant.Constants.CHANNEL;
@@ -70,7 +71,7 @@ public class RedisUtils {
                                 @Override
                                 public void onMessage(String channel, String message) {
                                     // TODO 触发改动相关操作
-                                    ProxyConfig.notifyconfigChangedListeners(false);
+                                    ProxyUtils.notifyconfigChangedListeners(false);
                                 }
                             },
                             CHANNEL);
@@ -83,7 +84,7 @@ public class RedisUtils {
                     jedisCluster.subscribe(new JedisPubSub() {
                         @Override
                         public void onMessage(String channel, String message) {
-                            ProxyConfig.notifyconfigChangedListeners(false);
+                            ProxyUtils.notifyconfigChangedListeners(false);
                         }
                     }, CHANNEL);
                 }
@@ -91,7 +92,7 @@ public class RedisUtils {
         }
     }
 
-    public static String setKey(String key, String value, int time) {
+    public static String set(String key, String value, int time) {
         if (type > 1) {
             final Jedis resource = jedisPool.getResource();
             final String setex = resource.setex(key, time, value);
@@ -102,7 +103,7 @@ public class RedisUtils {
     }
 
 
-    public static String getKey(String key) {
+    public static String get(String key) {
         if (type > 1) {
             final Jedis resource = jedisPool.getResource();
             final String s = resource.get(key);
@@ -112,7 +113,7 @@ public class RedisUtils {
         return jedisCluster.get(key);
     }
 
-    public static long deleteKey(String key) {
+    public static long delete(String key) {
         if (type > 1) {
             final Jedis resource = jedisPool.getResource();
             final long del = resource.del(key);
@@ -131,6 +132,27 @@ public class RedisUtils {
             return publish;
         }
         return jedisCluster.publish(CHANNEL, msg);
+    }
+
+
+    public static long hset(String key, Map<String, String> value) {
+        if (type > 1) {
+            final Jedis resource = jedisPool.getResource();
+            final long hset = resource.hset(key, value);
+            resource.close();
+            return hset;
+        }
+        return jedisCluster.hset(key, value);
+    }
+
+    public static Map<String, String> hget(String key){
+        if (type > 1) {
+            final Jedis resource = jedisPool.getResource();
+            final Map<String, String> hget = resource.hgetAll(key);
+            resource.close();
+            return hget;
+        }
+        return jedisCluster.hgetAll(key);
     }
 
 

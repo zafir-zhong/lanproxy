@@ -18,6 +18,7 @@ import org.fengfei.lanproxy.common.Config;
 import org.fengfei.lanproxy.common.JsonUtil;
 import org.fengfei.lanproxy.server.entity.Client;
 import org.fengfei.lanproxy.server.entity.ClientProxyMapping;
+import org.fengfei.lanproxy.server.utils.ProxyUtils;
 import org.fengfei.lanproxy.server.utils.RedisUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,20 +79,8 @@ public class ProxyConfig implements Serializable {
 
     private MysqlConfig mysqlConfig;
 
-    /** 代理客户端，支持多个客户端 */
-    private List<Client> clients;
-
     /** 更新配置后保证在其他线程即时生效 */
-    private static ProxyConfig instance = new ProxyConfig();;
-
-    /** 代理服务器为各个代理客户端（key）开启对应的端口列表（value） */
-    private volatile Map<String, List<Integer>> clientInetPortMapping = new HashMap<String, List<Integer>>();
-
-    /** 代理服务器上的每个对外端口（key）对应的代理客户端背后的真实服务器信息（value） */
-    private volatile Map<Integer, String> inetPortLanInfoMapping = new HashMap<Integer, String>();
-
-    /** 配置变化监听器 */
-    private static List<ConfigChangedListener> configChangedListeners = new ArrayList<ConfigChangedListener>();
+    private static ProxyConfig instance = new ProxyConfig();
 
     private ProxyConfig() {
 
@@ -124,7 +113,7 @@ public class ProxyConfig implements Serializable {
                 "config init serverBind {}, serverPort {}, configServerBind {}, configServerPort {}, configAdminUsername {}, configAdminPassword {}",
                 serverBind, serverPort, configServerBind, configServerPort, configAdminUsername, configAdminPassword);
 
-        update();
+        ProxyUtils.notifyconfigChangedListeners(false);
     }
 
     public Integer getServerPort() {
@@ -175,9 +164,7 @@ public class ProxyConfig implements Serializable {
         this.serverPort = serverPort;
     }
 
-    public List<Client> getClients() {
-        return clients;
-    }
+
 
     public RedisConfig getRedisConfig() {
         return redisConfig;
@@ -195,93 +182,13 @@ public class ProxyConfig implements Serializable {
         this.mysqlConfig = mysqlConfig;
     }
 
-    /**
-     * 解析配置文件
-     */
-    public void update() {
-        // TODO 加一个redis订阅机制来修改这个端口改动
-        notifyconfigChangedListeners(true);
-    }
 
-    /**
-     * 配置更新通知
-     */
-    public static void notifyconfigChangedListeners(boolean send2Redis) {
-        if(send2Redis) {
-            RedisUtils.publish("test");
-        }
-        for (ConfigChangedListener changedListener : configChangedListeners) {
-            changedListener.onChanged();
-        }
-    }
 
-    /**
-     * 添加配置变化监听器
-     *
-     * @param configChangedListener
-     */
-    public static void addConfigChangedListener(ConfigChangedListener configChangedListener) {
-        configChangedListeners.add(configChangedListener);
-    }
 
-    /**
-     * 移除配置变化监听器
-     *
-     * @param configChangedListener
-     */
-    public void removeConfigChangedListener(ConfigChangedListener configChangedListener) {
-        configChangedListeners.remove(configChangedListener);
-    }
-
-    /**
-     * 获取代理客户端对应的代理服务器端口
-     *
-     * @param clientKey
-     * @return
-     */
-    public List<Integer> getClientInetPorts(String clientKey) {
-        return clientInetPortMapping.get(clientKey);
-    }
-
-    /**
-     * 获取所有的clientKey
-     *
-     * @return
-     */
-    public Set<String> getClientKeySet() {
-        return clientInetPortMapping.keySet();
-    }
-
-    /**
-     * 根据代理服务器端口获取后端服务器代理信息
-     *
-     * @param port
-     * @return
-     */
-    public String getLanInfo(Integer port) {
-        return inetPortLanInfoMapping.get(port);
-    }
-
-    /**
-     * 返回需要绑定在代理服务器的端口（用于用户请求）
-     *
-     * @return
-     */
-    public List<Integer> getUserPorts() {
-        List<Integer> ports = new ArrayList<Integer>();
-        Iterator<Integer> ite = inetPortLanInfoMapping.keySet().iterator();
-        while (ite.hasNext()) {
-            ports.add(ite.next());
-        }
-
-        return ports;
-    }
 
     public static ProxyConfig getInstance() {
         return instance;
     }
-
-
 
     /**
      * 配置更新回调

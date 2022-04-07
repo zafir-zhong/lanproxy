@@ -13,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.fengfei.lanproxy.protocol.Constants;
 import org.fengfei.lanproxy.server.config.ProxyConfig;
 import org.fengfei.lanproxy.server.config.ProxyConfig.ConfigChangedListener;
+import org.fengfei.lanproxy.server.utils.ConfigDataFlowUtils;
+import org.fengfei.lanproxy.server.utils.ProxyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +44,7 @@ public class ProxyChannelManager {
     private static Map<String, Channel> cmdChannels = new ConcurrentHashMap<String, Channel>();
 
     static {
-        ProxyConfig.getInstance().addConfigChangedListener(new ConfigChangedListener() {
+        ProxyUtils.addConfigChangedListener(new ConfigChangedListener() {
 
             /**
              * 代理配置发生变化时回调
@@ -55,14 +57,14 @@ public class ProxyChannelManager {
                     String clientKey = proxyChannel.attr(CHANNEL_CLIENT_KEY).get();
 
                     // 去除已经去掉的clientKey配置
-                    Set<String> clientKeySet = ProxyConfig.getInstance().getClientKeySet();
+                    Set<String> clientKeySet = ConfigDataFlowUtils.getClientKeySet();
                     if (!clientKeySet.contains(clientKey)) {
                         removeCmdChannel(proxyChannel);
                         continue;
                     }
 
                     if (proxyChannel.isActive()) {
-                        List<Integer> inetPorts = new ArrayList<Integer>(ProxyConfig.getInstance().getClientInetPorts(clientKey));
+                        List<Integer> inetPorts = new ArrayList<Integer>(ConfigDataFlowUtils.getClientInetPorts(clientKey));
                         Set<Integer> inetPortSet = new HashSet<Integer>(inetPorts);
                         List<Integer> channelInetPorts = new ArrayList<Integer>(proxyChannel.attr(CHANNEL_PORT).get());
 
@@ -122,7 +124,7 @@ public class ProxyChannelManager {
                     Channel userChannel = entry.getValue();
                     String requestLanInfo = getUserChannelRequestLanInfo(userChannel);
                     InetSocketAddress sa = (InetSocketAddress) userChannel.localAddress();
-                    String lanInfo = ProxyConfig.getInstance().getLanInfo(sa.getPort());
+                    String lanInfo = ConfigDataFlowUtils.getLanInfo(sa.getPort());
 
                     // 判断当前配置中对应外网端口的lan信息是否与正在运行的连接中的lan信息是否一致
                     if (lanInfo == null || !lanInfo.equals(requestLanInfo)) {
@@ -225,7 +227,7 @@ public class ProxyChannelManager {
      */
     public static void addUserChannelToCmdChannel(Channel cmdChannel, String userId, Channel userChannel) {
         InetSocketAddress sa = (InetSocketAddress) userChannel.localAddress();
-        String lanInfo = ProxyConfig.getInstance().getLanInfo(sa.getPort());
+        String lanInfo = ConfigDataFlowUtils.getLanInfo(sa.getPort());
         userChannel.attr(Constants.USER_ID).set(userId);
         userChannel.attr(REQUEST_LAN_INFO).set(lanInfo);
         cmdChannel.attr(USER_CHANNELS).get().put(userId, userChannel);

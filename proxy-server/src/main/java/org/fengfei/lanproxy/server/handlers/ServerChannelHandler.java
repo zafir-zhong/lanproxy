@@ -6,6 +6,8 @@ import org.fengfei.lanproxy.protocol.Constants;
 import org.fengfei.lanproxy.protocol.ProxyMessage;
 import org.fengfei.lanproxy.server.ProxyChannelManager;
 import org.fengfei.lanproxy.server.config.ProxyConfig;
+import org.fengfei.lanproxy.server.utils.ConfigDataFlowUtils;
+import org.fengfei.lanproxy.server.utils.ProxyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,7 +134,7 @@ public class ServerChannelHandler extends SimpleChannelInboundHandler<ProxyMessa
 
     private void handleAuthMessage(ChannelHandlerContext ctx, ProxyMessage proxyMessage) {
         String clientKey = proxyMessage.getUri();
-        List<Integer> ports = ProxyConfig.getInstance().getClientInetPorts(clientKey);
+        List<Integer> ports = ConfigDataFlowUtils.getClientInetPorts(clientKey);
         if (ports == null) {
             logger.info("error clientKey {}, {}", clientKey, ctx.channel());
             ctx.channel().close();

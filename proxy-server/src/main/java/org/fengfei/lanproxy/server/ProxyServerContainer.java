@@ -15,6 +15,8 @@ import org.fengfei.lanproxy.protocol.ProxyMessageDecoder;
 import org.fengfei.lanproxy.protocol.ProxyMessageEncoder;
 import org.fengfei.lanproxy.server.config.ProxyConfig;
 import org.fengfei.lanproxy.server.config.ProxyConfig.ConfigChangedListener;
+import org.fengfei.lanproxy.server.utils.ConfigDataFlowUtils;
+import org.fengfei.lanproxy.server.utils.ProxyUtils;
 import org.fengfei.lanproxy.server.web.WebConfigContainer;
 import org.fengfei.lanproxy.server.handlers.ServerChannelHandler;
 import org.fengfei.lanproxy.server.handlers.UserChannelHandler;
@@ -58,7 +60,7 @@ public class ProxyServerContainer implements Container, ConfigChangedListener {
         serverBossGroup = new NioEventLoopGroup();
         serverWorkerGroup = new NioEventLoopGroup();
 
-        ProxyConfig.getInstance().addConfigChangedListener(this);
+        ProxyUtils.addConfigChangedListener(this);
     }
 
     @Override
@@ -132,7 +134,7 @@ public class ProxyServerContainer implements Container, ConfigChangedListener {
             }
         });
 
-        List<Integer> ports = ProxyConfig.getInstance().getUserPorts();
+        List<Integer> ports = ConfigDataFlowUtils.getUserPorts();
         for (int port : ports) {
             try {
                 bootstrap.bind(port).get();

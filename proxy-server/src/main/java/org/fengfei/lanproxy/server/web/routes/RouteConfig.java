@@ -12,9 +12,9 @@ import io.netty.util.internal.StringUtil;
 import org.fengfei.lanproxy.common.JsonUtil;
 import org.fengfei.lanproxy.server.ProxyChannelManager;
 import org.fengfei.lanproxy.server.constant.Constants;
-import org.fengfei.lanproxy.server.config.ProxyConfig;
 import org.fengfei.lanproxy.server.entity.Client;
 import org.fengfei.lanproxy.server.entity.UserInfo;
+import org.fengfei.lanproxy.server.utils.ConfigDataFlowUtils;
 import org.fengfei.lanproxy.server.web.ApiRoute;
 import org.fengfei.lanproxy.server.web.RequestHandler;
 import org.fengfei.lanproxy.server.web.RequestMiddleware;
@@ -93,7 +93,7 @@ public class RouteConfig {
 
             @Override
             public ResponseInfo request(FullHttpRequest request) {
-                List<Client> clients = MysqlUtils.getClients();
+                List<Client> clients = ConfigDataFlowUtils.getClients();
                 for (Client client : clients) {
                     Channel channel = ProxyChannelManager.getCmdChannel(client.getClientKey());
                     if (channel != null) {
@@ -122,7 +122,7 @@ public class RouteConfig {
                 final List<Client> clientsInRunnable = clients;
                 try {
 
-                    MysqlUtils.updateClients(clientsInRunnable);
+                    ConfigDataFlowUtils.updateClients(clientsInRunnable);
 
                 } catch (Exception ex) {
                     logger.error("config update error", ex);
@@ -168,7 +168,7 @@ public class RouteConfig {
             public ResponseInfo request(FullHttpRequest request) {
                 final String key = token.get();
                 if (StrUtil.isNotBlank(key)) {
-                    RedisUtils.deleteKey(key);
+                    RedisUtils.delete(key);
                 }
                 return ResponseInfo.build(ResponseInfo.CODE_OK, "success");
             }
@@ -193,7 +193,7 @@ public class RouteConfig {
 
 
     public static boolean checkToken(String token) {
-        final String key = RedisUtils.getKey(Constants.TOKEN + token);
+        final String key = RedisUtils.get(Constants.TOKEN + token);
         if (StringUtil.isNullOrEmpty(key)) {
             return false;
         }
@@ -205,7 +205,7 @@ public class RouteConfig {
     }
 
     public static void setToken(String token, UserInfo userInfo) {
-        RedisUtils.setKey(Constants.TOKEN + token, JSONObject.toJSONString(userInfo), Constants.DEFAULT_TIME);
+        RedisUtils.set(Constants.TOKEN + token, JSONObject.toJSONString(userInfo), Constants.DEFAULT_TIME);
     }
 
     public static boolean checkUser(String username, String password) {

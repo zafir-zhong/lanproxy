@@ -13,6 +13,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
+import org.fengfei.lanproxy.server.utils.ConfigDataFlowUtils;
 
 /**
  * 处理服务端 channel.
@@ -62,7 +63,7 @@ public class UserChannelHandler extends SimpleChannelInboundHandler<ByteBuf> {
             ctx.channel().close();
         } else {
             String userId = newUserId();
-            String lanInfo = ProxyConfig.getInstance().getLanInfo(sa.getPort());
+            String lanInfo = ConfigDataFlowUtils.getLanInfo(sa.getPort());
             // 用户连接到代理服务器时，设置用户连接不可读，等待代理后端服务器连接成功后再改变为可读状态
             userChannel.config().setOption(ChannelOption.AUTO_READ, false);
             ProxyChannelManager.addUserChannelToCmdChannel(cmdChannel, userId, userChannel);
