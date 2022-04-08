@@ -16,7 +16,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import org.fengfei.lanproxy.server.utils.ConfigDataFlowUtils;
 
 /**
- * 处理服务端 channel.
+ * 处理服务端 channel.   外部内容传入到服务器的监听端口里面的
  */
 public class UserChannelHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
@@ -39,6 +39,9 @@ public class UserChannelHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
             // 该端口还没有代理客户端
             ctx.channel().close();
+
+
+            // TODO 这个可以转发给其他服务器？
         } else {
             byte[] bytes = new byte[buf.readableBytes()];
             buf.readBytes(bytes);
@@ -48,6 +51,7 @@ public class UserChannelHandler extends SimpleChannelInboundHandler<ByteBuf> {
             proxyMessage.setUri(userId);
             proxyMessage.setData(bytes);
             proxyChannel.writeAndFlush(proxyMessage);
+
         }
     }
 

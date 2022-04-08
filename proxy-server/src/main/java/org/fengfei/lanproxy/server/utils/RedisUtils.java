@@ -156,4 +156,15 @@ public class RedisUtils {
     }
 
 
+    public static boolean exists(String key){
+        if (type > 1) {
+            final Jedis resource = jedisPool.getResource();
+            final boolean exists = resource.exists(key);
+            resource.close();
+            return exists;
+        }
+        return jedisCluster.exists(key);
+    }
+
+
 }

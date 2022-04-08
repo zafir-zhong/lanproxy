@@ -21,7 +21,7 @@ import io.netty.channel.SimpleChannelInboundHandler;
 
 /**
  *
- * @author fengfei
+ * @author fengfei  与客户端交互的？
  *
  */
 public class ServerChannelHandler extends SimpleChannelInboundHandler<ProxyMessage> {
@@ -53,6 +53,7 @@ public class ServerChannelHandler extends SimpleChannelInboundHandler<ProxyMessa
     }
 
     private void handleTransferMessage(ChannelHandlerContext ctx, ProxyMessage proxyMessage) {
+        // TODO 可能需要转发消息
         Channel userChannel = ctx.channel().attr(Constants.NEXT_CHANNEL).get();
         if (userChannel != null) {
             ByteBuf buf = ctx.alloc().buffer(proxyMessage.getData().length);
@@ -62,6 +63,7 @@ public class ServerChannelHandler extends SimpleChannelInboundHandler<ProxyMessa
     }
 
     private void handleDisconnectMessage(ChannelHandlerContext ctx, ProxyMessage proxyMessage) {
+        // TODO 删除连接缓存？
         String clientKey = ctx.channel().attr(Constants.CLIENT_KEY).get();
 
         // 代理连接没有连上服务器由控制连接发送用户端断开连接消息
@@ -108,6 +110,8 @@ public class ServerChannelHandler extends SimpleChannelInboundHandler<ProxyMessa
 
         Channel cmdChannel = ProxyChannelManager.getCmdChannel(tokens[1]);
         if (cmdChannel == null) {
+            // TODO 是否应该转发一下一下给其他
+
             ctx.channel().close();
             logger.warn("ConnectMessage:error cmd channel key {}", tokens[1]);
             return;
@@ -130,6 +134,8 @@ public class ServerChannelHandler extends SimpleChannelInboundHandler<ProxyMessa
         heartbeatMessage.setType(ProxyMessage.TYPE_HEARTBEAT);
         logger.debug("response heartbeat message {}", ctx.channel());
         ctx.channel().writeAndFlush(heartbeatMessage);
+
+        // 心跳返回成功无逻辑处理
     }
 
     private void handleAuthMessage(ChannelHandlerContext ctx, ProxyMessage proxyMessage) {
@@ -150,6 +156,8 @@ public class ServerChannelHandler extends SimpleChannelInboundHandler<ProxyMessa
 
         logger.info("set port => channel, {}, {}, {}", clientKey, ports, ctx.channel());
         ProxyChannelManager.addCmdChannel(ports, clientKey, ctx.channel());
+
+        // TODO 写入某人某ip授权成功？
     }
 
     @Override
