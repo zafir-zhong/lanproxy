@@ -18,6 +18,7 @@ public class Constants {
     public static final String INET_REDIS_KEY = "client_inet";
     public static final String USER_PORT_REDIS_KEY = "client_port";
     public static final String LAN_REDIS_KEY = "client_lan";
+    public static final String CLIENT_STATUS_KEY = "lanproxy:status:";
 
     public static final int DEFAULT_TIME = 7200;
 

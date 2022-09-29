@@ -14,7 +14,9 @@ import org.fengfei.lanproxy.protocol.Constants;
 import org.fengfei.lanproxy.server.config.ProxyConfig;
 import org.fengfei.lanproxy.server.config.ProxyConfig.ConfigChangedListener;
 import org.fengfei.lanproxy.server.utils.ConfigDataFlowUtils;
+import org.fengfei.lanproxy.server.utils.IpUtil;
 import org.fengfei.lanproxy.server.utils.ProxyUtils;
+import org.fengfei.lanproxy.server.utils.RedisUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,6 +164,7 @@ public class ProxyChannelManager {
         channel.attr(CHANNEL_CLIENT_KEY).set(clientKey);
         channel.attr(USER_CHANNELS).set(new ConcurrentHashMap<String, Channel>());
         cmdChannels.put(clientKey, channel);
+        RedisUtils.set(org.fengfei.lanproxy.server.constant.Constants.CLIENT_STATUS_KEY+clientKey, IpUtil.getLocalIp());
     }
 
     /**
@@ -208,6 +211,7 @@ public class ProxyChannelManager {
                 logger.info("disconnect user channel {}", userChannel);
             }
         }
+        RedisUtils.delete(org.fengfei.lanproxy.server.constant.Constants.CLIENT_STATUS_KEY+clientKey);
     }
 
     public static Channel getCmdChannel(Integer port) {

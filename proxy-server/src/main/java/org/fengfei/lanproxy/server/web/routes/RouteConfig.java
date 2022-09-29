@@ -3,6 +3,7 @@ package org.fengfei.lanproxy.server.web.routes;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 import cn.hutool.core.util.StrUtil;
@@ -45,6 +46,8 @@ public class RouteConfig {
 
     private static ThreadLocal<String> token = new ThreadLocal<>();
 
+
+
     /**
      * 管理员不能同时在多个地方登录
      */
@@ -80,7 +83,7 @@ public class RouteConfig {
                     }
                 }
 
-                if (!request.getUri().equals("/login") && !authenticated) {
+                if (!"/login".equals(request.getUri()) && !authenticated) {
                     throw new ContextException(ResponseInfo.CODE_UNAUTHORIZED);
                 }
 
@@ -96,11 +99,12 @@ public class RouteConfig {
                 List<Client> clients = ConfigDataFlowUtils.getClients();
                 for (Client client : clients) {
                     Channel channel = ProxyChannelManager.getCmdChannel(client.getClientKey());
-                    if (channel != null) {
-                        client.setStatus(1);// online
-                    } else {
-                        client.setStatus(0);// offline
-                    }
+//                    if (channel != null) {
+//                        client.setStatus(1);// online
+//                    } else {
+//                        client.setStatus(0);// offline
+//                    }
+                    getStatusByConfigKey(client.getClientKey());
                 }
                 return ResponseInfo.build(clients);
             }
@@ -217,6 +221,10 @@ public class RouteConfig {
             return false;
         }
         return SecureUtil.md5(password).equals(userByName.getPassword());
+    }
+
+    public static int getStatusByConfigKey(String configKey) {
+        return RedisUtils.hasKey(Constants.CLIENT_STATUS_KEY + configKey) ? 1 : 0;
     }
 
     public static void main(String[] args) {

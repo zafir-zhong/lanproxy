@@ -102,6 +102,16 @@ public class RedisUtils {
         return jedisCluster.setex(key, time, value);
     }
 
+    public static String set(String key, String value) {
+        if (type > 1) {
+            final Jedis resource = jedisPool.getResource();
+            final String setex = resource.set(key, value);
+            resource.close();
+            return setex;
+        }
+        return jedisCluster.set(key, value);
+    }
+
 
     public static String get(String key) {
         if (type > 1) {
@@ -143,6 +153,16 @@ public class RedisUtils {
             return hset;
         }
         return jedisCluster.hset(key, value);
+    }
+
+    public static boolean hasKey(String key){
+        if (type > 1) {
+            final Jedis resource = jedisPool.getResource();
+            final boolean has = resource.exists(key);
+            resource.close();
+            return has;
+        }
+        return jedisCluster.exists(key);
     }
 
     public static Map<String, String> hget(String key){
